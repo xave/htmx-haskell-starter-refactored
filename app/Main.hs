@@ -24,7 +24,7 @@ import Network.Wai (
     responseFile,
     responseStatus,
  )
-import Network.Wai.Handler.Warp
+import Network.Wai.Handler.Warp (run)
 import Network.Wai.Parse (Param, lbsBackEnd, parseRequestBody)
 import Text.Printf (printf)
 
@@ -40,10 +40,10 @@ app :: Application
 app req respond = do
     (params, _) <- parseRequestBody lbsBackEnd req
     res <- case mepinf of
-        ("DELETE", ["deltodo", did]) -> delTodo $ unpack did
-        ("GET", ["todos"]) -> do resHtmlString . todosToUl <$> todoList
-        ("POST", ["form"]) -> formPost params
-        _nonIo -> return $ case mepinf of
+        ("DELETE", ["deltodo", deletionId]) -> delTodo $ unpack deletionId
+        ("GET", ["todos"]) -> getTodos
+        ("POST", ["form"]) -> postForm params
+        _nonIO -> return $ case mepinf of
             ("GET", []) -> resHtmlFile "app/form.html"
             ("GET", ["htmx"]) -> resJs "app/htmx.min.js"
             _undefinedPath -> errorPage $ rawPath ++ " is undefined" where rawPath = toString $ rawPathInfo req
@@ -61,8 +61,8 @@ midLog midApp req res = do
     let res' h = do
             end <- getCurrentTime
             let diff = show $ diffUTCTime start end
-            let status = responseStatus h
-            let code = statusCode status
+                status = responseStatus h
+                code = statusCode status
             -- let message = BU.toString $ statusMessage status
             printf "%d %s %s %s\n" code method path diff
             res h
@@ -93,15 +93,18 @@ todoList = do
     close conn
     return r
 
+getTodos :: IO Response
+getTodos = do resHtmlString . todosToUl <$> todoList
+
 delTodo :: String -> IO Response
-delTodo did = do
+delTodo deletionId = do
     conn <- getConn
-    execute conn "DELETE FROM todos WHERE rowid=?" (Only did)
+    execute conn "DELETE FROM todos WHERE rowid=?" (Only deletionId)
     close conn
     return $ responseBuilder status200 textHtml $ fromString ""
 
-formPost :: [Param] -> IO Response
-formPost params =
+postForm :: [Param] -> IO Response
+postForm params =
     case params of
         [("msg", msg)] -> do
             conn <- getConn
