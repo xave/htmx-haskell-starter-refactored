@@ -72,6 +72,9 @@ executable haskell-web
                     , http-types
                     , utf8-string
                     , wai
+                    , lucid2
+                    -- , htmx-lucid
+                    -- , lucid2-htmx
                     , wai-extra
                     , sqlite-simple
 

@@ -5,11 +5,20 @@ import Data.ByteString.UTF8 (toString)
 import qualified Data.ByteString.UTF8 as BU
 import Data.Int (Int64)
 import Data.Text (unpack)
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import Data.Time
 import Database.SQLite.Simple
+
+-- import Htmx.Lucid.Core (hxSwap_, hxTarget_)
+-- import Htmx.Lucid.Extra (hxDelete_)
+-- import Lucid (Html (), button_, class_, div_, id_, li_, renderText, toHtml, ul_)
+
+import Lucid
+import Lucid.Base
 import Network.HTTP.Types (
     ResponseHeaders,
-    Status (statusCode),
+    Status (statusCode, statusMessage),
     status200,
     status404,
  )
@@ -57,14 +66,14 @@ midLog :: Middleware
 midLog midApp req res = do
     start <- getCurrentTime
     let method = BU.toString $ requestMethod req
-    let path = BU.toString $ rawPathInfo req
+        path = BU.toString $ rawPathInfo req
     let res' h = do
             end <- getCurrentTime
             let diff = show $ diffUTCTime start end
                 status = responseStatus h
                 code = statusCode status
-            -- let message = BU.toString $ statusMessage status
-            printf "%d %s %s %s\n" code method path diff
+            let message = BU.toString $ statusMessage status
+            printf "%d %s %s %s %s \n" code method path diff message
             res h
     midApp req res'
 
@@ -79,10 +88,22 @@ instance FromRow TodoField where
     fromRow = TodoField <$> field <*> field
 
 todoToLi :: TodoField -> String
-todoToLi (TodoField i s) = printf "<li hx-target=\"this\"><button hx-swap=\"outerHTML\" hx-delete=\"/deltodo/%d\">x</button> | %s</li>" i s :: String
+todoToLi (TodoField i s) = htmlToString htmlRepresentation
+  where
+    htmlRepresentation :: Html ()
+    htmlRepresentation =
+        li_ [hxTarget_ "this"] $ do
+            button_ [hxSwap_ "outerHTML", hxDelete_ delTodoWithArg] "x"
+            myListItem
+    delTodoWithArg = "/deltodo/" <> T.pack (show i) :: T.Text
+    myListItem = toHtml $ " | " <> s
 
 todosToUl :: [TodoField] -> String
-todosToUl todos = "<ul id=\"todos\">" ++ h ++ "</ul>"
+todosToUl todos =
+    htmlToString
+        $ ul_
+            [id_ "todos"]
+        $ toHtml h -- "<ul id=\"todos\">" ++ h ++ "</ul>"
   where
     h = concatMap todoToLi todos
 
@@ -145,3 +166,21 @@ resHtmlString s = responseBuilder status200 textHtml $ fromString s
 
 resJs :: FilePath -> Response
 resJs = resFile textJs
+
+-- using lucid and htmx
+-- Manually defining these compiles. Using the lucid-htmx packages does not
+
+htmlToString :: Html () -> String
+htmlToString a = LT.unpack $ renderText a
+
+-- hxGet_ :: T.Text -> Attributes
+-- hxGet_ = makeAttributes "hx-get"
+
+hxTarget_ :: T.Text -> Attributes
+hxTarget_ = makeAttributes "hx-target"
+
+hxSwap_ :: T.Text -> Attributes
+hxSwap_ = makeAttributes "hx-swap"
+
+hxDelete_ :: T.Text -> Attributes
+hxDelete_ = makeAttributes "hx-delete"
