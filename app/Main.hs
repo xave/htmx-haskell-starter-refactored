@@ -104,15 +104,15 @@ todosToUl todos =
     h :: Html ()
     h = mconcat $ map todoToLi todos
 
-todoList :: IO [TodoField]
-todoList = do
+fetchTodoList :: IO [TodoField]
+fetchTodoList = do
     conn <- getConn
     r <- query_ conn "SELECT rowid, todo FROM todos" :: IO [TodoField]
     close conn
     return r
 
 getTodos :: IO Response
-getTodos = do responseByteString . todosToUl <$> todoList
+getTodos = do responseByteString . todosToUl <$> fetchTodoList
 
 delTodo :: String -> IO Response
 delTodo deletionId = do
