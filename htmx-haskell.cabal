@@ -58,7 +58,7 @@ executable htmx-haskell
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    -- other-modules:
+    other-modules:   Routes
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -77,6 +77,7 @@ executable htmx-haskell
                     , wai
                     , wai-extra
                     , warp >= 3.4.0 && < 3.5
+                    , web-inv-route
 
     -- Directories containing source files.
     hs-source-dirs:   app

@@ -36,6 +36,7 @@ import Network.Wai (
  )
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Parse (Param, lbsBackEnd, parseRequestBody)
+import Routes
 import Text.Printf (printf)
 
 main :: IO ()
