@@ -42,7 +42,7 @@ main :: IO ()
 main = do
     setupDB
     putStrLn $ "Listening on http://localhost:" ++ show port
-    putStrLn $ TL.unpack $ renderText form
+    -- putStrLn $ TL.unpack $ renderText form
     run port $ midLog app -- run :: Port -> Application -> IO ()
   where
     port = 3000
@@ -56,7 +56,7 @@ app req respond = do
         ("POST", ["form"]) -> postForm params
         _nonIO -> return $ case mepinf of
             -- ("GET", []) -> resHtmlFile "app/form.html"
-            ("GET", []) -> resHtmlFile "../temphtml.html"
+            ("GET", []) -> responseByteString form
             ("GET", ["htmx"]) -> resJs "app/htmx.min.js"
             _undefinedPath -> errorPage $ rawPath ++ " is undefined" where rawPath = toString $ rawPathInfo req
     respond res
