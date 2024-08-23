@@ -11,7 +11,7 @@ cabal-version:      3.0
 --   http://haskell.org/cabal/users-guide/
 --
 -- The name of the package.
-name:               haskell-web
+name:               htmx-haskell
 
 -- The package version.
 -- See the Haskell package versioning policy (PVP) for standards
@@ -50,7 +50,7 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options: -Wall
 
-executable haskell-web
+executable htmx-haskell
     -- Import common warning flags.
     import:           warnings
 
@@ -65,24 +65,22 @@ executable haskell-web
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.17.2.1
-                    , warp >= 3.4.0 && < 3.5
-                    , time
-                    , text
-                    , blaze-builder
+                    , bytestring
+                    , htmx
+                    , htmx-lucid
                     , http-types
+                    , lucid2
+                    , sqlite-simple
+                    , text
+                    , time
                     , utf8-string
                     , wai
-                    , lucid2
-                    , htmx-lucid
-                    -- , lucid2-htmx
                     , wai-extra
-                    , sqlite-simple
-                    , parsec
-                    , network-uri
-                    , bytestring
+                    , warp >= 3.4.0 && < 3.5
 
     -- Directories containing source files.
     hs-source-dirs:   app
 
     -- Base language which the package is written in.
     default-language: Haskell2010
+    ghc-options: "-Wunused-packages"

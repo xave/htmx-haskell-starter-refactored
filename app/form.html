@@ -1,16 +1,40 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-	<head>
-		<title>goblins</title>
-		<script src="/htmx"></script>
-	</head>
-	<body>
-		<form hx-post="/form" hx-target="#todos" hx-swap="beforeend" hx-on::after-request="this.reset()">
-		    <input type="text" name="msg"/>
-		    <input type="submit" value="Add Todo"/>
-		</form>
-		<div hx-get="/todos" hx-trigger="load" hx-swap="outerHTML">
-			
-		</div>
-	</body>
+  <head>
+    <title>goblins</title>
+    <script src="/htmx"></script>
+  </head>
+  <body>
+    <form
+      hx-post="/form"
+      hx-target="#todos"
+      hx-swap="beforeend"
+      hx-on::afterRequest="this.reset()"
+    >
+      <input type="text" name="msg" /> <input type="submit" value="Add Todo" />
+    </form>
+    <div hx-get="/todos" hx-trigger="load" hx-swap="outerHTML"></div>
+    <div hx-post="/mouse_entered" hx-trigger="mouseenter">
+      [Here Mouse, Mouse!]
+    </div>
+    <template>
+      <tr id="message" hx-swap-oob="true">
+        <td>Joe</td>
+        <td>Smith</td>
+      </tr>
+    </template>
+    <button
+      hx-delete="/account"
+      hx-confirm="Are you sure you wish to delete your account?"
+    >
+      Delete My Account
+    </button>
+    <div hx-confirm="Are you sure?">
+      <button hx-delete="/account">Delete My Account</button>
+      <button hx-put="/account">Update My Account</button>
+      <button hx-confirm="unset" hx-push-url="true" hx-get="/fake_path_FOO">
+        Cancel
+      </button>
+    </div>
+  </body>
 </html>
