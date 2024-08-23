@@ -1,21 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Blaze.ByteString.Builder.Char8 (fromString)
+import qualified Data.ByteString.Builder as Builder
+import qualified Data.ByteString.Lazy as BL
 import Data.ByteString.UTF8 (toString)
 import qualified Data.ByteString.UTF8 as BU
 import Data.Int (Int64)
-import Data.Text (unpack)
+import Data.String (fromString)
+import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
 import Data.Time
 import Database.SQLite.Simple
 
--- import Htmx.Lucid.Core (hxSwap_, hxTarget_)
--- import Htmx.Lucid.Extra (hxDelete_)
--- import Lucid (Html (), button_, class_, div_, id_, li_, renderText, toHtml, ul_)
+import Htmx.Lucid.Core (hxSwap_, hxTarget_)
+import Htmx.Lucid.Extra (hxDelete_)
 
 import Lucid
-import Lucid.Base
 import Network.HTTP.Types (
     ResponseHeaders,
     Status (statusCode, statusMessage),
@@ -49,7 +48,7 @@ app :: Application
 app req respond = do
     (params, _) <- parseRequestBody lbsBackEnd req
     res <- case mepinf of
-        ("DELETE", ["deltodo", deletionId]) -> delTodo $ unpack deletionId
+        ("DELETE", ["deltodo", deletionId]) -> delTodo $ T.unpack deletionId
         ("GET", ["todos"]) -> getTodos
         ("POST", ["form"]) -> postForm params
         _nonIO -> return $ case mepinf of
@@ -87,25 +86,23 @@ data TodoField = TodoField !Int64 !String deriving (Show)
 instance FromRow TodoField where
     fromRow = TodoField <$> field <*> field
 
-todoToLi :: TodoField -> String
-todoToLi (TodoField i s) = htmlToString htmlRepresentation
+todoToLi :: TodoField -> Html ()
+todoToLi (TodoField i s) = htmlRepresentation
   where
     htmlRepresentation :: Html ()
     htmlRepresentation =
         li_ [hxTarget_ "this"] $ do
             button_ [hxSwap_ "outerHTML", hxDelete_ delTodoWithArg] "x"
             myListItem
-    delTodoWithArg = "/deltodo/" <> T.pack (show i) :: T.Text
+    delTodoWithArg = "/deltodo/" <> T.pack (show i) :: Text
     myListItem = toHtml $ " | " <> s
 
-todosToUl :: [TodoField] -> String
+todosToUl :: [TodoField] -> Html ()
 todosToUl todos =
-    htmlToString
-        $ ul_
-            [id_ "todos"]
-        $ toHtml h -- "<ul id=\"todos\">" ++ h ++ "</ul>"
+    ul_ [id_ "todos"] h -- "<ul id=\"todos\">" ++ h ++ "</ul>"
   where
-    h = concatMap todoToLi todos
+    h :: Html ()
+    h = mconcat $ map todoToLi todos
 
 todoList :: IO [TodoField]
 todoList = do
@@ -115,7 +112,7 @@ todoList = do
     return r
 
 getTodos :: IO Response
-getTodos = do resHtmlString . todosToUl <$> todoList
+getTodos = do responseByteString . todosToUl <$> todoList
 
 delTodo :: String -> IO Response
 delTodo deletionId = do
@@ -132,7 +129,7 @@ postForm params =
             execute conn "INSERT INTO todos (todo) VALUES (?)" (Only smsg)
             rowId <- lastInsertRowId conn
             close conn
-            return $ resHtmlString $ todoToLi $ TodoField rowId smsg
+            return $ responseByteString $ todoToLi $ TodoField rowId smsg
           where
             smsg = toString msg
         _badBody -> return $ errorPage "invalid post body"
@@ -161,26 +158,8 @@ resFile mime filename = responseFile status200 mime filename Nothing
 resHtmlFile :: FilePath -> Response
 resHtmlFile = resFile textHtml
 
-resHtmlString :: String -> Response
-resHtmlString s = responseBuilder status200 textHtml $ fromString s
+responseByteString :: Html () -> Response
+responseByteString h = responseBuilder status200 textHtml $ Builder.lazyByteString (renderBS h :: BL.ByteString)
 
 resJs :: FilePath -> Response
 resJs = resFile textJs
-
--- using lucid and htmx
--- Manually defining these compiles. Using the lucid-htmx packages does not
-
-htmlToString :: Html () -> String
-htmlToString a = LT.unpack $ renderText a
-
--- hxGet_ :: T.Text -> Attributes
--- hxGet_ = makeAttributes "hx-get"
-
-hxTarget_ :: T.Text -> Attributes
-hxTarget_ = makeAttributes "hx-target"
-
-hxSwap_ :: T.Text -> Attributes
-hxSwap_ = makeAttributes "hx-swap"
-
-hxDelete_ :: T.Text -> Attributes
-hxDelete_ = makeAttributes "hx-delete"

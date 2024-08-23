@@ -73,10 +73,13 @@ executable haskell-web
                     , utf8-string
                     , wai
                     , lucid2
-                    -- , htmx-lucid
+                    , htmx-lucid
                     -- , lucid2-htmx
                     , wai-extra
                     , sqlite-simple
+                    , parsec
+                    , network-uri
+                    , bytestring
 
     -- Directories containing source files.
     hs-source-dirs:   app
