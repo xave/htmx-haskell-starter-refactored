@@ -91,13 +91,11 @@ instance FromRow TodoField where
     fromRow = TodoField <$> field <*> field
 
 todoToLi :: TodoField -> Html ()
-todoToLi (TodoField i s) = htmlRepresentation
+todoToLi (TodoField i s) =
+    li_ [hxTarget_ "this"] $ do
+        button_ [hxSwap_ "outerHTML", hxDelete_ delTodoWithArg] "x"
+        myListItem
   where
-    htmlRepresentation :: Html ()
-    htmlRepresentation =
-        li_ [hxTarget_ "this"] $ do
-            button_ [hxSwap_ "outerHTML", hxDelete_ delTodoWithArg] "x"
-            myListItem
     delTodoWithArg = "/deltodo/" <> T.pack (show i) :: Text
     myListItem = toHtml $ " | " <> s
 
@@ -105,8 +103,7 @@ todosToUl :: [TodoField] -> Html ()
 todosToUl todos =
     ul_ [id_ "todos"] h -- "<ul id=\"todos\">" ++ h ++ "</ul>"
   where
-    h :: Html ()
-    h = mconcat $ map todoToLi todos
+    h = mconcat $ map todoToLi todos :: Html ()
 
 fetchTodoList :: IO [TodoField]
 fetchTodoList = do
