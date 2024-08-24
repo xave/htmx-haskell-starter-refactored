@@ -58,6 +58,15 @@ complex =
         `RouteAction` \() ->
             (p_ "complex")
 
+getMouseEntered :: RouteAction () (Html ())
+getMouseEntered =
+    routeMethod GET
+        *< routeSecure False
+        *< routePath "mouseentered"
+        *< routeHost ("localhost:3000")
+        `RouteAction` \() ->
+            ("" :: Html ())
+
 -- 2. Routes map
 myRoutes :: RouteMap (Html ())
 myRoutes =
@@ -66,6 +75,7 @@ myRoutes =
         , routeNormCase getThing
         , routeNormCase getHomeR
         , routeNormCase getTodos
+        , routeNormCase getMouseEntered
         ]
 
 -- 3. Route map lookup
