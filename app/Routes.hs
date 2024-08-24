@@ -23,27 +23,40 @@ import Web.Route.Invertible.Wai
 --
 -- curl -X GET localhost:3000
 getHomeR :: RouteAction () (Html ())
-getHomeR = routeMethod GET *< routeHost ("localhost:3000") `RouteAction` \() -> testForm
+getHomeR =
+    routeMethod GET
+        *< routeHost ("localhost:3000")
+        `RouteAction` \() -> testForm
 
 -- curl -X GET localhost:3000/todos/42
 getThing :: RouteAction Int (Html ())
 getThing =
-    routeMethod GET *< routePath ("todos" *< parameter) >* routeHost ("localhost:3000") `RouteAction` \i -> do
-        p_ (toHtml (show i))
+    routeMethod GET
+        *< routePath ("todos" *< parameter)
+        >* routeHost ("localhost:3000")
+        `RouteAction` \i -> do
+            p_ (toHtml (show i))
 
 -- curl -X GET localhost:3000/todos
 -- This makes the infinite printing to screen from getHomeR stop
 -- since it has found something with the #todos id.
 getTodos :: RouteAction () (Html ())
 getTodos =
-    routeMethod GET *< routePath ("todos") >* routeHost ("localhost:3000") `RouteAction` \() -> do
-        li_ [id_ "todos"] "the todos"
+    routeMethod GET
+        *< routePath ("todos")
+        >* routeHost ("localhost:3000")
+        `RouteAction` \() -> do
+            li_ [id_ "todos"] "the todos"
 
 -- curl -X GET localhost:3000/foo
 complex :: RouteAction () (Html ())
 complex =
-    (routeMethod GET *< routeSecure False) *< (routePath "foo" *< routeHost ("localhost:3000")) `RouteAction` \() ->
-        (p_ "complex")
+    routeMethod GET
+        *< routeSecure False
+        *< routePath "foo"
+        *< routeHost ("localhost:3000")
+        `RouteAction` \() ->
+            (p_ "complex")
 
 -- 2. Routes map
 myRoutes :: RouteMap (Html ())
