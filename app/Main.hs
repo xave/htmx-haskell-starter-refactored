@@ -12,10 +12,10 @@ import qualified Data.Text.Lazy as TL
 import Data.Time
 import Database.SQLite.Simple
 
+import Data.Either
 import Htmx.Event (HtmxEvent (..))
 import Htmx.Lucid.Core (OnEvent (..), hxGet_, hxOn_, hxPost_, hxPushUrl_, hxSwapOob_, hxSwap_, hxTarget_, hxTrigger_)
 import Htmx.Lucid.Extra (hxConfirm_, hxDelete_, hxPut_)
-
 import Lucid
 import Network.HTTP.Types (
     ResponseHeaders,
@@ -49,18 +49,20 @@ main = do
     port = 3000
 
 app :: Application
-app req respond = do
-    (params, _) <- parseRequestBody lbsBackEnd req
-    res <- case mepinf of
-        ("DELETE", ["deltodo", deletionId]) -> delTodo $ T.unpack deletionId
-        ("GET", ["todos"]) -> getTodos
-        ("POST", ["form"]) -> postForm params
-        _nonIO -> return $ case mepinf of
-            -- ("GET", []) -> resHtmlFile "app/form.html"
-            ("GET", []) -> responseByteString form
-            ("GET", ["htmx"]) -> resJs "app/htmx.min.js"
-            _undefinedPath -> errorPage $ rawPath ++ " is undefined" where rawPath = toString $ rawPathInfo req
-    respond res
+app req respond =
+    do
+        (params, _) <- parseRequestBody lbsBackEnd req
+        res <- case mepinf of
+            ("DELETE", ["deltodo", deletionId]) -> delTodo $ T.unpack deletionId
+            ("GET", ["todos"]) -> getTodos
+            ("POST", ["form"]) -> postForm params
+            _nonIO -> return $ case mepinf of
+                -- ("GET", []) -> resHtmlFile "app/form.html"
+                ("GET", []) -> responseByteString form
+                ("GET", ["htmx"]) -> resJs "app/htmx.min.js"
+                _undefinedPath -> errorPage $ rawPath ++ " is undefined" where rawPath = toString $ rawPathInfo req
+        -- respond res
+        respond $ responseByteString . fromRight (p_ " woops\n" :: Html ()) $ myRouteWai req myRoutes
   where
     pinf = pathInfo req
     meth = requestMethod req
