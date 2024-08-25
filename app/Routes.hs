@@ -1,7 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Routes (myRouteWai, myRoutes) where
+module Routes (
+    myRouteWai,
+    myRoutes,
+) where
 
+import qualified Data.ByteString.Builder as Builder
+import qualified Data.ByteString.Lazy as BL
 import Htmx.Event (HtmxEvent (..))
 import Htmx.Lucid.Core (OnEvent (..), hxGet_, hxOn_, hxPost_, hxPushUrl_, hxSwapOob_, hxSwap_, hxTarget_, hxTrigger_)
 import Htmx.Lucid.Extra (hxConfirm_, hxDelete_, hxPut_)
@@ -13,6 +18,7 @@ import Network.HTTP.Types (
     status404,
  )
 import Network.Wai as Wai
+import Todo
 import Web.Route.Invertible
 import Web.Route.Invertible.Common
 import Web.Route.Invertible.Wai
@@ -22,11 +28,11 @@ import Web.Route.Invertible.Wai
 --
 --
 -- curl -X GET localhost:3000
-getHomeR :: RouteAction () (Html ())
+getHomeR :: RouteAction () (IO Response)
 getHomeR =
     routeMethod GET
         *< routeHost ("localhost:3000")
-        `RouteAction` \() -> testForm
+        `RouteAction` \() -> return $ Routes.responseByteString $ testForm
 
 -- curl -X GET localhost:3000/todos/42
 getThing :: RouteAction Int (Html ())
@@ -40,23 +46,24 @@ getThing =
 -- curl -X GET localhost:3000/todos
 -- This makes the infinite printing to screen from getHomeR stop
 -- since it has found something with the #todos id.
-getTodos :: RouteAction () (Html ())
-getTodos =
+getTodoR :: RouteAction () (IO Response)
+getTodoR =
     routeMethod GET
         *< routePath ("todos")
         >* routeHost ("localhost:3000")
         `RouteAction` \() -> do
-            li_ [id_ "todos"] "the todos"
+            -- li_ [id_ "todos"] "the todos"
+            getTodos
 
 -- curl -X GET localhost:3000/foo
-complex :: RouteAction () (Html ())
+complex :: RouteAction () (IO (Html ()))
 complex =
     routeMethod GET
         *< routeSecure False
         *< routePath "foo"
         *< routeHost ("localhost:3000")
         `RouteAction` \() ->
-            (p_ "complex")
+            return (p_ "complex")
 
 getMouseEntered :: RouteAction () (Html ())
 getMouseEntered =
@@ -67,19 +74,22 @@ getMouseEntered =
         `RouteAction` \() ->
             ("" :: Html ())
 
+responseByteString :: Html () -> Response
+responseByteString h = responseBuilder status200 textHtml $ Builder.lazyByteString (renderBS h :: BL.ByteString)
+
 -- 2. Routes map
-myRoutes :: RouteMap (Html ())
+myRoutes :: RouteMap (IO Response)
 myRoutes =
     routes
-        [ routeNormCase complex
-        , routeNormCase getThing
-        , routeNormCase getHomeR
-        , routeNormCase getTodos
-        , routeNormCase getMouseEntered
+        -- [ pure $ routeNormCase complex
+        -- , pure $ routeNormCase getThing
+        [ routeNormCase getHomeR
+        , routeNormCase getTodoR
+        -- , pure $ routeNormCase getMouseEntered
         ]
 
 -- 3. Route map lookup
-myRouteWai :: Wai.Request -> RouteMap (Html ()) -> Either (Status, ResponseHeaders) (Html ())
+myRouteWai :: Wai.Request -> RouteMap (IO Response) -> Either (Status, ResponseHeaders) (IO Response)
 myRouteWai req routeMap = routeWai req routeMap
 
 -- import Network.Wai as Wai

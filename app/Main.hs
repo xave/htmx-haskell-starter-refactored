@@ -8,11 +8,11 @@ import Data.Int (Int64)
 import Data.String (fromString)
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
 import Data.Time
-import Database.SQLite.Simple
 
 import Data.Either
+import Database
+import Database.SQLite.Simple
 import Htmx.Event (HtmxEvent (..))
 import Htmx.Lucid.Core (OnEvent (..), hxGet_, hxOn_, hxPost_, hxPushUrl_, hxSwapOob_, hxSwap_, hxTarget_, hxTrigger_)
 import Htmx.Lucid.Extra (hxConfirm_, hxDelete_, hxPut_)
@@ -38,6 +38,7 @@ import Network.Wai.Handler.Warp (run)
 import Network.Wai.Parse (Param, lbsBackEnd, parseRequestBody)
 import Routes
 import Text.Printf (printf)
+import Todo
 
 main :: IO ()
 main = do
@@ -48,13 +49,14 @@ main = do
   where
     port = 3000
 
+-- type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 app :: Application
 app req respond =
     do
         (params, _) <- parseRequestBody lbsBackEnd req
         res <- case mepinf of
             ("DELETE", ["deltodo", deletionId]) -> delTodo $ T.unpack deletionId
-            ("GET", ["todos"]) -> getTodos
+            -- ("GET", ["todos"]) -> getTodos
             ("POST", ["form"]) -> postForm params
             _nonIO -> return $ case mepinf of
                 -- ("GET", []) -> resHtmlFile "app/form.html"
@@ -62,7 +64,8 @@ app req respond =
                 ("GET", ["htmx"]) -> resJs "app/htmx.min.js"
                 _undefinedPath -> errorPage $ rawPath ++ " is undefined" where rawPath = toString $ rawPathInfo req
         -- respond res
-        respond $ responseByteString . fromRight (p_ " woops\n" :: Html ()) $ myRouteWai req myRoutes
+        temp <- fromRight (return $ errorResponseByteString $ (" woops #404#\n" :: Html ())) $ myRouteWai req myRoutes
+        respond temp
   where
     pinf = pathInfo req
     meth = requestMethod req
@@ -83,11 +86,6 @@ midLog midApp req res = do
             res h
     midApp req res'
 
-setupDB :: IO ()
-setupDB = do
-    conn <- getConn
-    execute_ conn "CREATE TABLE IF NOT EXISTS todos (todo VARCHAR(255))"
-
 data TodoField = TodoField !Int64 !String deriving (Show)
 
 instance FromRow TodoField where
@@ -102,29 +100,6 @@ todoToLi (TodoField i s) =
     delTodoWithArg = "/deltodo/" <> T.pack (show i) :: Text
     myListItem = toHtml $ " | " <> s
 
-todosToUl :: [TodoField] -> Html ()
-todosToUl todos =
-    ul_ [id_ "todos"] h -- "<ul id=\"todos\">" ++ h ++ "</ul>"
-  where
-    h = mconcat $ map todoToLi todos :: Html ()
-
-fetchTodoList :: IO [TodoField]
-fetchTodoList = do
-    conn <- getConn
-    r <- query_ conn "SELECT rowid, todo FROM todos" :: IO [TodoField]
-    close conn
-    return r
-
-getTodos :: IO Response
-getTodos = do responseByteString . todosToUl <$> fetchTodoList
-
-delTodo :: String -> IO Response
-delTodo deletionId = do
-    conn <- getConn
-    execute conn "DELETE FROM todos WHERE rowid=?" (Only deletionId)
-    close conn
-    return $ responseBuilder status200 textHtml $ fromString ""
-
 postForm :: [Param] -> IO Response
 postForm params =
     case params of
@@ -138,9 +113,6 @@ postForm params =
             smsg = toString msg
         _badBody -> return $ errorPage "invalid post body"
 
-getConn :: IO Connection
-getConn = open "db.db"
-
 errorPage :: String -> Response
 errorPage e = responseBuilder status404 textPlain $ fromString e
 
@@ -150,20 +122,10 @@ contentType h = [("Content-Type", h)]
 textPlain :: ResponseHeaders
 textPlain = contentType "text/plain"
 
-textHtml :: ResponseHeaders
-textHtml = contentType "text/html"
-
-textJs :: ResponseHeaders
 textJs = contentType "text/javascript"
 
 resFile :: ResponseHeaders -> FilePath -> Response
 resFile mime filename = responseFile status200 mime filename Nothing
-
-resHtmlFile :: FilePath -> Response
-resHtmlFile = resFile textHtml
-
-responseByteString :: Html () -> Response
-responseByteString h = responseBuilder status200 textHtml $ Builder.lazyByteString (renderBS h :: BL.ByteString)
 
 resJs :: FilePath -> Response
 resJs = resFile textJs

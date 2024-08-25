@@ -59,6 +59,8 @@ executable htmx-haskell
 
     -- Modules included in this executable, other than Main.
     other-modules:   Routes
+                     Database
+                     Todo
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
