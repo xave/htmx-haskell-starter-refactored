@@ -1,12 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Todo (
-    getTodos,
-    textHtml,
-    responseByteString,
-    errorResponseByteString,
-    delTodo,
-) where
+module Todo
+    ( getTodos
+    , textHtml
+    , errorResponseByteString
+    , delTodo
+    , errorPage
+    , TodoField (..)
+    , todoToLi
+    , resJs
+    ) where
 
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Lazy as BL
@@ -25,26 +28,25 @@ import Htmx.Event (HtmxEvent (..))
 import Htmx.Lucid.Core (OnEvent (..), hxGet_, hxOn_, hxPost_, hxPushUrl_, hxSwapOob_, hxSwap_, hxTarget_, hxTrigger_)
 import Htmx.Lucid.Extra (hxConfirm_, hxDelete_, hxPut_)
 import Lucid
-import Network.HTTP.Types (
-    ResponseHeaders,
-    Status (statusCode, statusMessage),
-    status200,
-    status404,
- )
-import Network.Wai (
-    Application,
-    Middleware,
-    Response,
-    pathInfo,
-    rawPathInfo,
-    requestMethod,
-    responseBuilder,
-    responseFile,
-    responseStatus,
- )
+import Network.HTTP.Types
+    ( ResponseHeaders
+    , Status (statusCode, statusMessage)
+    , status200
+    , status404
+    )
+import Network.Wai
+    ( Application
+    , Middleware
+    , Response
+    , pathInfo
+    , rawPathInfo
+    , requestMethod
+    , responseBuilder
+    , responseFile
+    , responseStatus
+    )
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Parse (Param, lbsBackEnd, parseRequestBody)
-import Text.Printf (printf)
 
 data TodoField = TodoField !Int64 !String deriving (Show)
 
@@ -74,7 +76,7 @@ fetchTodoList = do
     return r
 
 getTodos :: IO Response
-getTodos = do responseByteString . todosToUl <$> fetchTodoList
+getTodos = responseByteString . todosToUl <$> fetchTodoList
 
 -- getTodos :: IO (Html ())
 -- getTodos = do todosToUl <$> fetchTodoList
@@ -88,24 +90,6 @@ delTodo deletionId = do
 
 getConn :: IO Connection
 getConn = open "db.db"
-
-setupDB :: IO ()
-setupDB = do
-    conn <- getConn
-    execute_ conn "CREATE TABLE IF NOT EXISTS todos (todo VARCHAR(255))"
-
-postForm :: [Param] -> IO Response
-postForm params =
-    case params of
-        [("msg", msg)] -> do
-            conn <- getConn
-            execute conn "INSERT INTO todos (todo) VALUES (?)" (Only smsg)
-            rowId <- lastInsertRowId conn
-            close conn
-            return $ responseByteString $ todoToLi $ TodoField rowId smsg
-          where
-            smsg = toString msg
-        _badBody -> return $ errorPage "invalid post body"
 
 responseByteString :: Html () -> Response
 responseByteString h = responseBuilder status200 textHtml $ Builder.lazyByteString (renderBS h :: BL.ByteString)
@@ -131,8 +115,8 @@ textJs = contentType "text/javascript"
 resFile :: ResponseHeaders -> FilePath -> Response
 resFile mime filename = responseFile status200 mime filename Nothing
 
-resHtmlFile :: FilePath -> Response
-resHtmlFile = resFile textHtml
+_resHtmlFile :: FilePath -> Response
+_resHtmlFile = resFile textHtml
 
 resJs :: FilePath -> Response
 resJs = resFile textJs
