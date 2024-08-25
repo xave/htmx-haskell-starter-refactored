@@ -21,13 +21,13 @@ import Network.HTTP.Types
     , StdMethod (..)
     , status200
     )
-import qualified Network.Wai as Wai (Request, Response, responseBuilder)
+import qualified Network.Wai as Wai (Request, Response, defaultRequest, responseBuilder)
 
--- import Network.Wai.Parse (Param, lbsBackEnd, parseRequestBody)
-import Network.Wai.Parse (Param)
+import Network.Wai.Parse (Param, lbsBackEnd, parseRequestBody)
 import Todo
 
--- import Web.Route.Invertible
+import qualified Web.Route.Invertible as WRI (Request)
+
 -- import Web.Route.Invertible.Common
 import Web.Route.Invertible.Wai
 
@@ -36,8 +36,8 @@ import Web.Route.Invertible.Wai
 --
 --
 -- curl -X GET localhost:3000
-getHomeR :: RouteAction () (IO Wai.Response)
-getHomeR =
+getHomeR :: Wai.Request -> RouteAction () (IO Wai.Response)
+getHomeR req =
     routeMethod GET
         *< routeHost ("localhost:3000")
         `RouteAction` \() -> return $ Routes.responseByteString $ testForm
@@ -54,8 +54,8 @@ _getThing =
 -- curl -X GET localhost:3000/todos
 -- This makes the infinite printing to screen from getHomeR stop
 -- since it has found something with the #todos id.
-getTodoR :: RouteAction () (IO Wai.Response)
-getTodoR =
+getTodoR :: Wai.Request -> RouteAction () (IO Wai.Response)
+getTodoR req =
     routeMethod GET
         *< routePath ("todos")
         >* routeHost ("localhost:3000")
@@ -82,27 +82,27 @@ _getMouseEntered =
         `RouteAction` \() ->
             ("" :: Html ())
 
-postFormR :: RouteAction () (IO Wai.Response)
-postFormR =
-    routeMethod GET
+postFormR :: Wai.Request -> RouteAction () (IO Wai.Response)
+postFormR req =
+    routeMethod POST
         *< routeSecure False
         *< routePath "form"
         *< routeHost ("localhost:3000")
         `RouteAction` \() ->
-            (postForm)
+            (postForm req)
 
 responseByteString :: Html () -> Wai.Response
 responseByteString h = Wai.responseBuilder status200 textHtml $ Builder.lazyByteString (renderBS h :: BL.ByteString)
 
 -- 2. Routes map
-myRoutes :: RouteMap (IO Wai.Response)
-myRoutes =
+myRoutes :: Wai.Request -> RouteMap (IO Wai.Response)
+myRoutes req =
     routes
         -- [ pure $ routeNormCase complex
         -- , pure $ routeNormCase getThing
-        [ routeNormCase getHomeR
-        , routeNormCase getTodoR
-        , routeNormCase postFormR
+        [ routeNormCase $ getHomeR Wai.defaultRequest
+        , routeNormCase $ getTodoR Wai.defaultRequest
+        , routeNormCase $ postFormR req
         -- , pure $ routeNormCase getMouseEntered
         ]
 
@@ -140,8 +140,12 @@ _postForm params =
             smsg = toString msg
         _badBody -> return $ errorPage "invalid post body"
 
-postForm :: IO Wai.Response
-postForm = undefined -- return $ responseByteString $ todoToLi $ TodoField rowId smsg
+postForm :: Wai.Request -> IO Wai.Response
+postForm req = do
+    (params, _files) <- parseRequestBody lbsBackEnd req
+    return $ responseByteString $ "Hello"
+
+-- undefined -- return $ responseByteString $ todoToLi $ TodoField rowId smsg
 
 testForm :: Html ()
 testForm =

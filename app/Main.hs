@@ -28,6 +28,7 @@ import Network.Wai.Handler.Warp (run)
 import Network.Wai.Parse
     ( lbsBackEnd
     , parseRequestBody
+    -- , Param
     )
 import Routes
 import Text.Printf (printf)
@@ -46,7 +47,7 @@ main = do
 app :: Application
 app req respond =
     do
-        (_params, _) <- parseRequestBody lbsBackEnd req
+        (_params, __files) <- parseRequestBody lbsBackEnd req -- files is really unused here.
         _res <- case mepinf of
             ("DELETE", ["deltodo", deletionId]) -> delTodo $ T.unpack deletionId
             -- ("GET", ["todos"]) -> getTodos
@@ -57,7 +58,7 @@ app req respond =
                 ("GET", ["htmx"]) -> resJs "app/htmx.min.js"
                 _undefinedPath -> errorPage $ rawPath ++ " is undefined" where rawPath = toString $ rawPathInfo req
         -- respond res
-        routes <- fromRight (return $ errorResponseByteString $ (" woops #404#\n" :: Html ())) $ myRouteWai req myRoutes
+        routes <- fromRight (return $ errorResponseByteString $ (" woops #404#\n" :: Html ())) $ myRouteWai req $ myRoutes req
 
         respond (routes)
   where
