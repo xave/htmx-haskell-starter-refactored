@@ -9,12 +9,14 @@ module Todo
     , TodoField (..)
     , todoToLi
     , resJs
+    , updateTodos
     ) where
 
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Lazy as BL
 import Data.ByteString.UTF8 (toString)
 import qualified Data.ByteString.UTF8 as BU
+import Data.Either
 import Data.Int (Int64)
 import Data.String (fromString)
 import Data.Text (Text)
@@ -22,8 +24,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Data.Time
 import Database.SQLite.Simple
-
-import Data.Either
 import Htmx.Event (HtmxEvent (..))
 import Htmx.Lucid.Core (OnEvent (..), hxGet_, hxOn_, hxPost_, hxPushUrl_, hxSwapOob_, hxSwap_, hxTarget_, hxTrigger_)
 import Htmx.Lucid.Extra (hxConfirm_, hxDelete_, hxPut_)
@@ -47,6 +47,7 @@ import Network.Wai
     )
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Parse (Param, lbsBackEnd, parseRequestBody)
+import Text.Printf (printf)
 
 data TodoField = TodoField !Int64 !String deriving (Show)
 
@@ -81,12 +82,20 @@ getTodos = responseByteString . todosToUl <$> fetchTodoList
 -- getTodos :: IO (Html ())
 -- getTodos = do todosToUl <$> fetchTodoList
 
-delTodo :: String -> IO Response
+delTodo :: Text -> IO Response
 delTodo deletionId = do
     conn <- getConn
     execute conn "DELETE FROM todos WHERE rowid=?" (Only deletionId)
     close conn
     return $ responseBuilder status200 textHtml $ fromString ""
+
+updateTodos :: String -> IO Response
+updateTodos smsg = do
+    conn <- getConn
+    execute conn "INSERT INTO todos (todo) VALUES (?)" (Only smsg)
+    rowId <- lastInsertRowId conn
+    close conn
+    return $ responseByteString $ todoToLi $ TodoField rowId smsg
 
 getConn :: IO Connection
 getConn = open "db.db"
