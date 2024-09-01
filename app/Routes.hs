@@ -1,4 +1,8 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+-- Deprecation warning from Wai.requestBody an be ignored
+-- because it has been handled here
+{-# OPTIONS_GHC -fno-warn-deprecations #-}
 
 module Routes
     ( myRouteWai
@@ -22,19 +26,24 @@ import Network.HTTP.Types
     , StdMethod (..)
     , status200
     )
-import qualified Network.Wai as Wai (Request (..), Response, defaultRequest, getRequestBodyChunk, responseBuilder)
+import qualified Network.Wai as Wai (Request (..), Response, getRequestBodyChunk, responseBuilder)
 
 import Todo
 
 -- import Web.Route.Invertible.Common
+
+import Data.IORef
+    ( atomicModifyIORef
+    , newIORef
+    )
 import Web.Route.Invertible.Wai
 
 -- 1. Endpoint specification
 -- https://hackage.haskell.org/package/web-inv-route-0.1.3.2/docs/Web-Route-Invertible-Common.html
 --
 -- curl -X GET localhost:3000
-getHomeR :: Wai.Request -> RouteAction () (IO Wai.Response)
-getHomeR _req =
+getHomeR :: RouteAction () (IO Wai.Response)
+getHomeR =
     routeMethod GET
         *< routeHost ("localhost:3000")
         `RouteAction` \() -> return $ responseByteString $ testForm
@@ -51,8 +60,8 @@ _getThing =
 -- curl -X GET localhost:3000/todos
 -- This makes the infinite printing to screen from getHomeR stop
 -- since it has found something with the #todos id.
-getTodoR :: Wai.Request -> RouteAction () (IO Wai.Response)
-getTodoR _req =
+getTodoR :: RouteAction () (IO Wai.Response)
+getTodoR =
     routeMethod GET
         *< routePath ("todos")
         >* routeHost ("localhost:3000")
@@ -70,8 +79,8 @@ _complex =
         `RouteAction` \() ->
             return (p_ "complex")
 
-postMouseEnteredR :: Wai.Request -> RouteAction () (IO Wai.Response)
-postMouseEnteredR _req =
+_postMouseEnteredR :: RouteAction () (IO Wai.Response)
+_postMouseEnteredR =
     routeMethod POST
         *< routeSecure False
         *< routePath "mouse_entered"
@@ -81,8 +90,8 @@ postMouseEnteredR _req =
             return $ responseByteString "mouse"
 
 -- curl -X DELETE localhost:3000/deltodo/5
-delTodoR :: Wai.Request -> RouteAction (Int) (IO Wai.Response)
-delTodoR _req =
+delTodoR :: RouteAction (Int) (IO Wai.Response)
+delTodoR =
     routeMethod DELETE
         *< routePath ("deltodo" *< parameter)
         >* routeHost ("localhost:3000")
@@ -122,8 +131,8 @@ postForm msg _req = do
     updateTodos msg
 
 -- curl -X GET localhost:3000/htmx
-getHtmxR :: Wai.Request -> RouteAction () (IO Wai.Response)
-getHtmxR _req =
+getHtmxR :: RouteAction () (IO Wai.Response)
+getHtmxR =
     routeMethod GET
         *< routePath "htmx"
         *< routeHost ("localhost:3000")
@@ -138,12 +147,12 @@ myRoutes req =
     routes
         -- [ pure $ routeNormCase complex
         -- , pure $ routeNormCase getThing
-        [ routeNormCase $ getHomeR req
-        , routeNormCase $ getTodoR req
+        [ routeNormCase $ getHomeR
+        , routeNormCase $ getTodoR
         , routeNormCase $ postFormR req
         , routeNormCase $ postForm2R req
-        , routeNormCase $ delTodoR req
-        , routeNormCase $ getHtmxR req
+        , routeNormCase $ delTodoR
+        , routeNormCase $ getHtmxR
         -- , routeNormCase $ postMouseEnteredR Wai.defaultRequest
         ]
 
