@@ -68,7 +68,7 @@ executable htmx-haskell
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.17.2.1
                     , bytestring
-                    , htmx
+                    , htmx ^>=0.1.0.1
                     , htmx-lucid
                     , http-types
                     , lucid2
